@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<meta name="theme-color" content="#070318">
+<title>AI 낱말퍼즐 · 가로세로 20</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Orbitron:wght@700;900&family=Noto+Sans+KR:wght@500;700;900&display=swap" rel="stylesheet">
+<style>
+:root{--cy:#00f0ff;--mg:#ff2bd6;--gd:#ffd23f;--gr:#7cff4f;--rd:#ff4d6d;--bg:#070318;--cs:28px}
+*{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{min-height:100vh;background:radial-gradient(120% 60% at 50% -10%,#2a0b55 0%,transparent 60%),radial-gradient(80% 50% at 100% 100%,rgba(255,43,214,.18),transparent 60%),var(--bg);background-attachment:fixed;color:#fff;font-family:'Noto Sans KR',system-ui,sans-serif;-webkit-tap-highlight-color:transparent}
+button{font-family:inherit;cursor:pointer;touch-action:manipulation}
+.wrap{max-width:560px;margin:0 auto;padding:12px 12px 40px}
+.hidden{display:none!important}
+
+/* header */
+header{display:flex;align-items:center;gap:10px;padding:4px 2px 12px}
+.ttl{flex:1;min-width:0}
+.ttl h1{font:400 22px/1.1 'Black Han Sans',sans-serif;letter-spacing:.02em;background:linear-gradient(90deg,#bff9ff,var(--cy) 40%,var(--mg));-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 0 10px rgba(0,240,255,.35))}
+.ttl small{display:block;font-size:11px;color:rgba(255,255,255,.55);margin-top:3px}
+.chip{display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:64px;height:44px;padding:0 10px;border-radius:12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12)}
+.chip b{font:900 16px/1 Orbitron,sans-serif;color:#fff}
+.chip span{font-size:10px;color:rgba(255,255,255,.55);margin-top:3px}
+#progBar{height:4px;border-radius:9px;background:rgba(255,255,255,.08);overflow:hidden;margin:0 2px 12px}
+#progFill{height:100%;width:0;background:linear-gradient(90deg,var(--cy),var(--mg));box-shadow:0 0 10px var(--mg);transition:width .5s cubic-bezier(.2,1,.3,1)}
+
+/* grid */
+.board{display:flex;justify-content:center;padding:10px 0 14px}
+#grid{display:grid;grid-template-columns:repeat(var(--cols),var(--cs));grid-auto-rows:var(--cs);gap:2px}
+.cell{position:relative;border-radius:5px;background:rgba(255,255,255,.075);border:1px solid rgba(0,240,255,.28);display:flex;align-items:center;justify-content:center;font:900 calc(var(--cs)*.5)/1 'Noto Sans KR',sans-serif;color:#fff;cursor:pointer;transition:background .15s,border-color .15s,box-shadow .15s;user-select:none;-webkit-user-select:none}
+.cell.void{background:none;border:0;cursor:default}
+.cell .n{position:absolute;left:2px;top:1px;font:700 calc(var(--cs)*.26)/1 Orbitron,sans-serif;color:rgba(255,255,255,.6)}
+.cell .t{pointer-events:none}
+.cell.sel{background:rgba(0,240,255,.2);border-color:var(--cy);box-shadow:0 0 10px rgba(0,240,255,.45)}
+.cell.cur{background:rgba(0,240,255,.38)}
+.cell.solved{background:rgba(124,255,79,.14);border-color:rgba(124,255,79,.6)}
+.cell.solved.sel{background:rgba(124,255,79,.28);box-shadow:0 0 10px rgba(124,255,79,.5)}
+.cell.hint .t{color:var(--gd)}
+.cell.preview .t{color:var(--cy);opacity:.9}
+.cell.revealed .t{color:#ffb3c7}
+.cell.pop{animation:cpop .5s cubic-bezier(.2,1.6,.4,1)}
+@keyframes cpop{0%{transform:scale(1)}40%{transform:scale(1.35);background:rgba(124,255,79,.55);box-shadow:0 0 18px var(--gr)}100%{transform:scale(1)}}
+
+/* panel */
+.panel{border-radius:18px;padding:14px 14px 12px;background:linear-gradient(160deg,rgba(26,10,58,.9),rgba(10,4,26,.92));border:1px solid rgba(0,240,255,.28);box-shadow:0 0 30px rgba(0,240,255,.1)}
+.cluehead{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.badge{font:700 12px/1 'Noto Sans KR',sans-serif;padding:6px 9px;border-radius:99px;color:#0a0320;background:var(--cy)}
+.badge.down{background:var(--mg)}
+.len{font-size:12px;color:rgba(255,255,255,.55)}
+#clueText{font-size:15px;line-height:1.5;color:rgba(255,255,255,.95);min-height:45px;word-break:keep-all}
+.pattern{display:flex;gap:5px;margin:12px 0 10px;flex-wrap:wrap}
+.pattern i{font-style:normal;width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;font:900 17px 'Noto Sans KR',sans-serif;background:rgba(255,255,255,.06);border:1px dashed rgba(255,255,255,.25)}
+.pattern i.lock{border-style:solid;border-color:rgba(124,255,79,.55);color:var(--gr)}
+.pattern i.lock.h{border-color:rgba(255,210,63,.6);color:var(--gd)}
+.pattern i.typed{border-style:solid;border-color:var(--cy);color:#dffcff}
+.pattern.shake{animation:shake .4s}
+@keyframes shake{20%,60%{transform:translateX(-8px)}40%,80%{transform:translateX(8px)}}
+.inrow{display:flex;gap:8px}
+#ans{flex:1;min-width:0;height:50px;border-radius:13px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.07);color:#fff;font:700 18px 'Noto Sans KR',sans-serif;padding:0 14px;outline:none}
+#ans:focus{border-color:var(--cy);box-shadow:0 0 14px rgba(0,240,255,.35)}
+#ans::placeholder{color:rgba(255,255,255,.35);font-weight:500;font-size:15px}
+.go{height:50px;padding:0 18px;border:0;border-radius:13px;font:400 18px 'Black Han Sans',sans-serif;color:#120022;background:linear-gradient(90deg,var(--cy),var(--mg));box-shadow:0 0 18px rgba(255,43,214,.35)}
+.go:active{transform:scale(.96)}
+.tools{display:flex;gap:8px;margin-top:10px}
+.tool{flex:1;height:40px;border-radius:11px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.04);color:rgba(255,255,255,.85);font-size:13px;font-weight:700}
+.tool:active{background:rgba(255,255,255,.12)}
+.tool.gd{color:var(--gd);border-color:rgba(255,210,63,.4)}
+.tool:disabled{opacity:.4;cursor:not-allowed}
+#toast{position:fixed;left:50%;top:18px;transform:translate(-50%,-30px);opacity:0;pointer-events:none;padding:10px 18px;border-radius:99px;font:700 15px 'Noto Sans KR',sans-serif;background:rgba(10,4,26,.92);border:1px solid var(--cy);box-shadow:0 0 20px rgba(0,240,255,.4);transition:all .25s;z-index:30;white-space:nowrap}
+#toast.on{opacity:1;transform:translate(-50%,0)}
+#toast.ok{border-color:var(--gr);box-shadow:0 0 20px rgba(124,255,79,.45)}
+#toast.no{border-color:var(--rd);box-shadow:0 0 20px rgba(255,77,109,.45)}
+
+/* clue list */
+.lists{margin-top:18px;display:grid;gap:14px}
+.lists h2{font:400 17px 'Black Han Sans',sans-serif;letter-spacing:.05em;margin:0 2px 8px;display:flex;align-items:center;gap:8px}
+.lists h2 .dot{width:10px;height:10px;border-radius:50%;background:var(--cy);box-shadow:0 0 8px var(--cy)}
+.lists h2 .dot.down{background:var(--mg);box-shadow:0 0 8px var(--mg)}
+.li{display:flex;gap:10px;align-items:flex-start;padding:11px 12px;border-radius:13px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);margin-bottom:6px;cursor:pointer;transition:background .15s}
+.li:active{background:rgba(255,255,255,.1)}
+.li.on{border-color:var(--cy);background:rgba(0,240,255,.08)}
+.li .num{flex:none;min-width:26px;height:26px;border-radius:8px;display:flex;align-items:center;justify-content:center;font:900 12px Orbitron,sans-serif;background:rgba(255,255,255,.08)}
+.li .ct{font-size:13.5px;line-height:1.5;color:rgba(255,255,255,.85);word-break:keep-all}
+.li .ct em{font-style:normal;color:rgba(255,255,255,.45);font-size:12px}
+.li.done{opacity:.6}
+.li.done .num{background:rgba(124,255,79,.25);color:var(--gr)}
+.li .aw{display:block;margin-top:3px;font-weight:900;color:var(--gr);font-size:14px}
+.foot{margin-top:18px;display:flex;gap:8px}
+.foot button:disabled{opacity:.45;cursor:not-allowed}
+.foot button{flex:1;height:44px;border-radius:12px;border:1px solid rgba(255,255,255,.15);background:transparent;color:rgba(255,255,255,.6);font-size:13px;font-weight:700}
+.credit{text-align:center;margin-top:16px;font:700 10px Orbitron,sans-serif;letter-spacing:.25em;color:rgba(255,255,255,.3)}
+
+/* overlays */
+.ov{position:fixed;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;padding:18px;background:rgba(4,1,14,.72);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.card{width:100%;max-width:380px;max-height:calc(100vh - 36px);overflow:auto;text-align:center;padding:26px 22px 22px;border-radius:22px;background:linear-gradient(160deg,rgba(24,8,52,.96),rgba(8,3,22,.97));border:1px solid rgba(0,240,255,.35);box-shadow:0 0 40px rgba(0,240,255,.18),0 0 90px rgba(255,43,214,.14);animation:cin .45s cubic-bezier(.2,1.3,.4,1)}
+@keyframes cin{from{opacity:0;transform:translateY(20px) scale(.95)}to{opacity:1;transform:none}}
+.kicker{display:inline-block;font:700 10px/1 Orbitron,sans-serif;letter-spacing:.25em;padding:7px 12px;border-radius:99px;color:var(--cy);border:1px solid rgba(0,240,255,.5);background:rgba(0,240,255,.08);margin-bottom:14px}
+.big{font:400 40px/1.1 'Black Han Sans',sans-serif;background:linear-gradient(90deg,#d8fdff,var(--cy) 45%,var(--mg));-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 0 14px rgba(0,240,255,.4))}
+.sub{word-break:keep-all;margin:8px 0 16px;color:rgba(255,255,255,.7);font-size:14px}
+.rules{list-style:none;text-align:left;display:grid;gap:9px;margin:0 0 18px;font-size:14px;color:rgba(255,255,255,.85);line-height:1.45}
+.rules li{display:flex;gap:9px}
+.rules b{color:var(--gd)}
+.rules .k{flex:none;width:22px;height:22px;border-radius:7px;display:flex;align-items:center;justify-content:center;font:900 11px Orbitron,sans-serif;background:rgba(0,240,255,.15);color:var(--cy)}
+.cta{display:block;width:100%;height:56px;border:0;border-radius:16px;font:400 22px 'Black Han Sans',sans-serif;letter-spacing:.06em;color:#14001f;background:linear-gradient(90deg,var(--cy),#8b7bff 50%,var(--mg));box-shadow:0 0 24px rgba(0,240,255,.4),0 0 40px rgba(255,43,214,.25)}
+.cta:active{transform:scale(.97)}
+.ghost{display:block;width:100%;height:46px;margin-top:10px;border-radius:14px;border:1px solid rgba(255,255,255,.22);background:transparent;color:#fff;font-size:15px;font-weight:700}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:18px 0}
+.stats div{padding:12px 4px;border-radius:14px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08)}
+.stats b{display:block;font:900 24px Orbitron,sans-serif}
+.stats span{font-size:11px;color:rgba(255,255,255,.6)}
+.rank{font:400 24px 'Black Han Sans',sans-serif;margin-top:4px}
+.hintline{margin-top:12px;font-size:12px;color:rgba(255,255,255,.5)}
+#confetti{position:fixed;inset:0;pointer-events:none;z-index:25}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="ttl"><h1>AI 가로세로 낱말퍼즐</h1><small>오늘 강의에 나온 단어 20개</small></div>
+    <div class="chip"><b id="timer">00:00</b><span>시간</span></div>
+    <div class="chip"><b id="prog">0/20</b><span>정답</span></div>
+  </header>
+  <div id="progBar"><div id="progFill"></div></div>
+
+  <div class="board"><div id="grid"></div></div>
+
+  <section class="panel" id="panel">
+    <div class="cluehead"><span id="dirBadge" class="badge">가로 1</span><span id="lenTxt" class="len"></span></div>
+    <p id="clueText">칸이나 아래 문제를 눌러 시작하세요</p>
+    <div id="pattern" class="pattern"></div>
+    <form class="inrow" id="form" autocomplete="off">
+      <input id="ans" type="text" placeholder="정답 입력 (영어는 한글로)" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="done">
+      <button class="go" type="submit">확인</button>
+    </form>
+    <div class="tools">
+      <button class="tool gd" id="hintBtn" type="button">💡 한 글자 힌트</button>
+      <button class="tool" id="nextBtn" type="button">다음 문제 ›</button>
+    </div>
+  </section>
+
+  <div class="lists">
+    <div><h2><span class="dot"></span>가로 열쇠</h2><div id="listA"></div></div>
+    <div><h2><span class="dot down"></span>세로 열쇠</h2><div id="listD"></div></div>
+  </div>
+
+  <div class="foot">
+    <button id="revealBtn" type="button">정답 전체 보기</button>
+    <button id="resetBtn" type="button">처음부터 다시</button>
+  </div>
+  <div class="credit">MADE WITH AI</div>
+</div>
+
+<div id="toast"></div>
+<canvas id="confetti"></canvas>
+
+<div class="ov" id="intro">
+  <div class="card">
+    <div class="kicker">AI CROSSWORD</div>
+    <div class="big">AI 낱말퍼즐</div>
+    <p class="sub">오늘 강의에 나온 단어 20개, 몇 분 만에 다 채울까요?</p>
+    <ul class="rules">
+      <li><span class="k">1</span><span>칸이나 문제를 누르고 <b>정답을 입력</b>하세요</span></li>
+      <li><span class="k">2</span><span>영어 단어도 <b>한글로</b> 써요 (PDF → 피디에프)</span></li>
+      <li><span class="k">3</span><span>맞히면 겹치는 글자가 다른 문제의 <b>힌트</b>가 돼요</span></li>
+      <li><span class="k">4</span><span>막히면 <b>💡 한 글자 힌트</b> (문제당 2번까지, 기록에 남아요)</span></li>
+    </ul>
+    <button class="cta" id="startBtn">시작하기</button>
+  </div>
+</div>
+
+<div class="ov hidden" id="done">
+  <div class="card">
+    <div class="kicker">COMPLETE</div>
+    <div class="big">퍼즐 완성! 🎉</div>
+    <div class="rank" id="rankTxt"></div>
+    <div class="stats">
+      <div><b id="dTime">00:00</b><span>걸린 시간</span></div>
+      <div><b id="dHint">0</b><span>사용한 힌트</span></div>
+    </div>
+    <button class="cta" id="viewBtn">완성된 퍼즐 보기</button>
+    <p class="hintline">📸 이 화면을 캡처해서 기록을 인증하세요!</p>
+  </div>
+</div>
+
+<div class="ov hidden" id="confirm">
+  <div class="card">
+    <div class="big" style="font-size:30px" id="cfTitle">정답을 볼까요?</div>
+    <p class="sub" id="cfText">모든 칸에 정답이 채워지고 시간이 멈춰요.</p>
+    <button class="cta" id="cfYes">네, 볼게요</button>
+    <button class="ghost" id="cfNo">계속 풀기</button>
+  </div>
+</div>
+
+<script>
+(() => {
+'use strict';
+const DATA = {"w":12,"h":14,"words":[{"answer":"챗지피티","clue":"오픈AI의 대표 AI. 영상 제작에서 기획과 스토리보드·이미지를 담당","r":2,"c":1,"d":"A","len":4,"alias":["CHATGPT","챗GPT","GPT챗"]},{"answer":"피디에프","clue":"클로드가 글로 한 번, 사진으로 한 번 더 읽어서 한도가 빨리 닳는 파일 형식","r":2,"c":3,"d":"D","len":4,"alias":["PDF"]},{"answer":"프롬프트","clue":"AI에게 일을 시킬 때 입력하는 지시문. 강의 결론: 그럴듯한 ○○○○보다 학습이 먼저","r":5,"c":3,"d":"A","len":4,"alias":["PROMPT"]},{"answer":"카이스트","clue":"'넌 아이디어 천재야' 대신, 실리콘밸리와 함께 이곳의 아이디어 발상법을 먼저 학습시키라고 했던 국내 과학기술 대학","r":2,"c":6,"d":"D","len":4,"alias":["KAIST"]},{"answer":"스토리보드","clue":"영상을 찍기 전 장면 흐름을 그림으로 정리한 계획표","r":4,"c":6,"d":"A","len":5,"alias":["STORYBOARD"]},{"answer":"클로드","clue":"앤트로픽의 AI. 영상 제작 과정에서 대본 작성을 맡은 AI","r":2,"c":10,"d":"D","len":3,"alias":["CLAUDE"]},{"answer":"클링","clue":"이미지를 영상으로 바꿔 주는 AI 영상 생성 툴","r":2,"c":10,"d":"A","len":2,"alias":["KLING"]},{"answer":"이미지","clue":"영상 제작 과정에서 GPT가 스토리보드·캐릭터 보드를 바탕으로 만들어 내는 그림","r":0,"c":2,"d":"D","len":3,"alias":["IMAGE"]},{"answer":"이거어떻게해","clue":"강의 엔딩에서 공개한 '궁극의 프롬프트' (띄어쓰기 없이)","r":0,"c":2,"d":"A","len":6,"alias":[]},{"answer":"프로젝트","clue":"콘텐츠·고객·이메일처럼 업무별로 나눠 자료와 지침을 저장하는 공간","r":5,"c":5,"d":"D","len":4,"alias":["PROJECT"]},{"answer":"베스트셀러","clue":"'넌 ○○○○○ 작가야' 대신 퓰리처상 수상 기자들의 글 구성법을 먼저 학습시키기","r":8,"c":3,"d":"A","len":5,"alias":["BESTSELLER"]},{"answer":"스킬","clue":"완성된 프롬프트를 저장해 반복 업무에 재사용하는 것. 강의에선 '무기(펜, 칼)'에 비유","r":8,"c":4,"d":"D","len":2,"alias":["SKILL"]},{"answer":"플러그인","clue":"MCP ○○○○ — 다른 사람(다른 강사)의 능력을 가져다 쓰는 확장 기능","r":7,"c":7,"d":"D","len":4,"alias":["PLUGIN","PLUG-IN"]},{"answer":"브레인스토밍","clue":"여럿이 자유롭게 아이디어를 쏟아내는 발상법. '넌 아이디어 천재야' 대신 이 방식을 먼저 학습시키기","r":10,"c":5,"d":"A","len":6,"alias":["BRAINSTORMING"]},{"answer":"레퍼런스","clue":"학습 단계에서 가장 중요한 것. 내가 원하는 결과물의 참고 자료","r":10,"c":6,"d":"D","len":4,"alias":["REFERENCE"]},{"answer":"지피티스","clue":"챗GPT에서 나만의 맞춤형 GPT를 만드는 기능","r":13,"c":3,"d":"A","len":4,"alias":["GPTS"]},{"answer":"토큰","clue":"AI가 글을 처리하는 단위. PDF를 그대로 올리면 이게 쭉쭉 닳는다","r":10,"c":9,"d":"D","len":2,"alias":["TOKEN"]},{"answer":"엠씨피","clue":"AI를 외부 앱·도구와 연결해 주는 표준 규격","r":11,"c":4,"d":"D","len":3,"alias":["MCP"]},{"answer":"노트북엘엠","clue":"구글의 자료 기반 AI. 강의에서 슬라이드 제작 예시로 등장","r":11,"c":0,"d":"A","len":5,"alias":["NOTEBOOKLM","노트북LM"]},{"answer":"수노","clue":"AI로 영상의 배경음악을 만드는 툴","r":10,"c":0,"d":"D","len":2,"alias":["SUNO"]}]};
+const $ = id => document.getElementById(id);
+const W = DATA.w, H = DATA.h;
+const KEY = 'ai_crossword_v1';
+const REVEAL_LOCK = 10 * 60 * 1000;
+const HINT_MAX = 2;
+
+/* ---------- model ---------- */
+const words = DATA.words.map((w, i) => ({ ...w, id: i, syl: [...w.answer], cells: [] }));
+const cells = new Map();
+const k = (r, c) => r * 100 + c;
+for (const w of words) {
+  for (let i = 0; i < w.syl.length; i++) {
+    const r = w.d === 'A' ? w.r : w.r + i, c = w.d === 'A' ? w.c + i : w.c;
+    if (!cells.has(k(r, c))) cells.set(k(r, c), { r, c, ans: w.syl[i], w: {}, num: 0, lock: false, hint: false, rev: false, el: null });
+    const cell = cells.get(k(r, c)); cell.w[w.d] = w.id; w.cells.push(cell);
+  }
+}
+let n = 1;
+for (let r = 0; r < H; r++) for (let c = 0; c < W; c++) {
+  const cell = cells.get(k(r, c)); if (!cell) continue;
+  const starts = words.filter(w => w.r === r && w.c === c);
+  if (starts.length) { cell.num = n; starts.forEach(w => w.num = n); n++; }
+}
+const order = [...words.filter(w => w.d === 'A').sort((a, b) => a.num - b.num), ...words.filter(w => w.d === 'D').sort((a, b) => a.num - b.num)];
+
+let solved = new Set(), hintCount = {}, hintsUsed = 0, startAt = 0, elapsedFinal = null, revealedAll = false, sel = null, started = false;
+
+/* ---------- persistence ---------- */
+function persist() {
+  try {
+    localStorage.setItem(KEY, JSON.stringify({ solved: [...solved], hints: [...cells.values()].filter(c => c.hint).map(c => k(c.r, c.c)), hintsUsed, hintCount, startAt, elapsedFinal, revealedAll, started }));
+  } catch (e) {}
+}
+function restore() {
+  try {
+    const s = JSON.parse(localStorage.getItem(KEY) || 'null'); if (!s || !s.started) return false;
+    s.hints.forEach(key => { const c = cells.get(key); if (c) { c.hint = true; c.lock = true; } });
+    s.solved.forEach(id => { if (words[id]) { solved.add(id); words[id].cells.forEach(c => c.lock = true); } });
+    hintsUsed = s.hintsUsed || 0; hintCount = s.hintCount || {}; startAt = s.startAt || Date.now(); elapsedFinal = s.elapsedFinal; revealedAll = !!s.revealedAll; started = true;
+    if (revealedAll) words.forEach(w => w.cells.forEach(c => { if (!c.lock) { c.lock = true; c.rev = true; } }));
+    return true;
+  } catch (e) { return false; }
+}
+
+/* ---------- audio ---------- */
+let AC = null;
+function initAudio() { if (AC) { AC.resume && AC.resume().catch(() => {}); return; } try { AC = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {} }
+function tone(f, d, type, v, t0) { if (!AC) return; const t = AC.currentTime + (t0 || 0); const o = AC.createOscillator(), g = AC.createGain(); o.type = type; o.frequency.value = f; g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(v, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + d); o.connect(g); g.connect(AC.destination); o.start(t); o.stop(t + d + 0.02); }
+const sfx = {
+  ok() { [0, 4, 7, 12].forEach((s, i) => tone(660 * Math.pow(2, s / 12), 0.25, 'triangle', 0.18, i * 0.06)); },
+  no() { tone(180, 0.25, 'sawtooth', 0.12); tone(140, 0.3, 'sawtooth', 0.1, 0.08); },
+  hint() { tone(988, 0.18, 'sine', 0.15); tone(1319, 0.22, 'sine', 0.12, 0.07); },
+  win() { [0, 4, 7, 12, 16, 19, 24].forEach((s, i) => tone(523 * Math.pow(2, s / 12), 0.4, 'square', 0.07, i * 0.08)); }
+};
+
+/* ---------- render ---------- */
+const grid = $('grid');
+function sizeGrid() {
+  const avail = Math.min(window.innerWidth - 24, 540);
+  const cs = Math.max(22, Math.floor((avail - (W - 1) * 2) / W));
+  document.documentElement.style.setProperty('--cs', cs + 'px');
+  grid.style.setProperty('--cols', W);
+}
+function buildGrid() {
+  grid.innerHTML = '';
+  for (let r = 0; r < H; r++) for (let c = 0; c < W; c++) {
+    const cell = cells.get(k(r, c)); const el = document.createElement('div');
+    if (!cell) { el.className = 'cell void'; grid.appendChild(el); continue; }
+    el.className = 'cell';
+    el.innerHTML = (cell.num ? `<span class="n">${cell.num}</span>` : '') + '<span class="t"></span>';
+    el.addEventListener('click', () => onCell(cell));
+    cell.el = el; grid.appendChild(el);
+  }
+}
+function paintCell(cell, preview) {
+  const t = cell.el.querySelector('.t');
+  if (cell.lock) { t.textContent = cell.ans; }
+  else t.textContent = preview || '';
+  const anySolved = Object.values(cell.w).some(id => solved.has(id));
+  cell.el.classList.toggle('solved', anySolved);
+  cell.el.classList.toggle('hint', cell.hint && !anySolved);
+  cell.el.classList.toggle('revealed', cell.rev && !anySolved);
+  cell.el.classList.toggle('preview', !cell.lock && !!preview);
+}
+function paintAll() { cells.forEach(c => paintCell(c)); }
+
+function buildLists() {
+  for (const d of ['A', 'D']) {
+    const box = $('list' + d); box.innerHTML = '';
+    for (const w of order.filter(x => x.d === d)) {
+      const el = document.createElement('div'); el.className = 'li';
+      el.innerHTML = `<span class="num">${w.num}</span><span class="ct">${esc(w.clue)} <em>(${w.syl.length}글자)</em><span class="aw hidden"></span></span>`;
+      el.addEventListener('click', () => { select(w.id); $('panel').scrollIntoView({ behavior: 'smooth', block: 'center' }); });
+      w.li = el; box.appendChild(el);
+    }
+  }
+}
+function esc(s) { return s.replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch])); }
+function paintList() {
+  for (const w of words) {
+    const done = solved.has(w.id) || revealedAll;
+    w.li.classList.toggle('done', done);
+    w.li.classList.toggle('on', sel === w.id);
+    const aw = w.li.querySelector('.aw'); aw.textContent = done ? w.answer : ''; aw.classList.toggle('hidden', !done);
+  }
+}
+function updateProgress() {
+  $('prog').textContent = `${solved.size}/${words.length}`;
+  $('progFill').style.width = (solved.size / words.length * 100) + '%';
+}
+
+/* ---------- selection & input ---------- */
+const ans = $('ans');
+function select(id, keepFocus) {
+  if (sel !== null) words[sel].cells.forEach(c => { c.el.classList.remove('sel'); paintCell(c); });
+  sel = id; const w = words[id];
+  w.cells.forEach(c => c.el.classList.add('sel'));
+  const badge = $('dirBadge'); badge.textContent = `${w.d === 'A' ? '가로' : '세로'} ${w.num}`; badge.classList.toggle('down', w.d === 'D');
+  $('lenTxt').textContent = `${w.syl.length}글자`;
+  $('clueText').textContent = w.clue;
+  ans.value = '';
+  const done = solved.has(id) || revealedAll;
+  ans.disabled = done; ans.placeholder = done ? '이미 맞힌 문제예요' : '정답 입력 (영어는 한글로)';
+  renderPattern(); paintList(); updateHintBtn();
+  if (!done && !keepFocus) { try { ans.focus({ preventScroll: true }); } catch (e) { ans.focus(); } }
+}
+function onCell(cell) {
+  initAudio();
+  const ids = ['A', 'D'].filter(d => cell.w[d] !== undefined).map(d => cell.w[d]);
+  let id = ids[0];
+  if (ids.length === 2 && sel !== null && ids.includes(sel)) id = ids.find(x => x !== sel);
+  else if (ids.length === 2) { const un = ids.filter(x => !solved.has(x)); if (un.length) id = un[0]; }
+  select(id);
+  $('panel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+function typedSyl() { return [...ans.value.replace(/\s/g, '')]; }
+function mapTyped(w, t) {
+  // accepts the whole word, or only the still-open cells
+  const open = w.cells.map((c, i) => c.lock ? -1 : i).filter(i => i >= 0);
+  const out = new Array(w.syl.length).fill('');
+  let full = t.length > open.length || open.length === w.syl.length;
+  if (!full) {
+    const li = w.cells.map((c, i) => c.lock ? i : -1).filter(i => i >= 0 && i < t.length);
+    if (li.length && li.every(i => t[i] === w.cells[i].ans)) full = true;
+  }
+  if (full) t.forEach((ch, i) => { if (i < out.length) out[i] = ch; });
+  else t.forEach((ch, j) => { out[open[j]] = ch; });
+  return out;
+}
+function renderPattern() {
+  const pat = $('pattern'); pat.innerHTML = '';
+  if (sel === null) return;
+  const w = words[sel], typed = mapTyped(w, typedSyl());
+  w.cells.forEach((c, i) => {
+    const b = document.createElement('i');
+    if (c.lock) { b.className = 'lock' + (c.hint && !solved.has(sel) ? ' h' : ''); b.textContent = c.ans; }
+    else if (typed[i]) { b.className = 'typed'; b.textContent = typed[i]; }
+    pat.appendChild(b);
+    paintCell(c, typed[i]);
+  });
+}
+ans.addEventListener('input', renderPattern);
+const norm = s => s.replace(/[\s\-·.]/g, '').toUpperCase();
+$('form').addEventListener('submit', e => {
+  e.preventDefault(); initAudio();
+  if (sel === null || solved.has(sel) || revealedAll) return;
+  const w = words[sel], raw = norm(ans.value);
+  if (!raw) return;
+  const filled = mapTyped(w, [...raw]).join('');
+  const ok = filled === w.answer || raw === w.answer || w.alias.some(a => norm(a) === raw);
+  if (ok) solve(w);
+  else {
+    sfx.no(); toast('땡! 다시 생각해 보세요', 'no');
+    const p = $('pattern'); p.classList.remove('shake'); void p.offsetWidth; p.classList.add('shake');
+    ans.select();
+  }
+});
+function solve(w, silent) {
+  solved.add(w.id);
+  w.cells.forEach((c, i) => { c.lock = true; paintCell(c); if (!silent) { c.el.classList.remove('pop'); void c.el.offsetWidth; c.el.style.animationDelay = (i * 0.06) + 's'; c.el.classList.add('pop'); } });
+  autoSolve();
+  updateProgress(); paintList(); persist();
+  if (!silent) { sfx.ok(); toast(pick(['정답! 🎉', '좋아요! ✨', '완벽해요! 🔥', '천재인데요? 🧠', '그거예요! 🙌'])); }
+  if (solved.size === words.length) { setTimeout(finish, 650); return; }
+  if (!silent) setTimeout(() => goNext(), 450);
+}
+function autoSolve() {
+  for (const w of words) if (!solved.has(w.id) && w.cells.every(c => c.lock)) { solved.add(w.id); w.cells.forEach(c => paintCell(c)); }
+}
+function goNext() {
+  const start = sel === null ? -1 : order.findIndex(w => w.id === sel);
+  for (let i = 1; i <= order.length; i++) { const w = order[(start + i) % order.length]; if (!solved.has(w.id)) { select(w.id); return; } }
+}
+const pick = a => a[(Math.random() * a.length) | 0];
+let toastT = null;
+function toast(msg, kind) {
+  const t = $('toast'); t.textContent = msg; t.className = 'on ' + (kind === 'no' ? 'no' : 'ok');
+  clearTimeout(toastT); toastT = setTimeout(() => t.className = '', 1300);
+}
+$('nextBtn').addEventListener('click', () => { initAudio(); goNext(); });
+$('hintBtn').addEventListener('click', () => {
+  initAudio();
+  if (sel === null || solved.has(sel) || revealedAll) { toast('힌트를 쓸 문제를 먼저 골라 주세요', 'no'); return; }
+  const w = words[sel], open = w.cells.filter(c => !c.lock), used = hintCount[w.id] || 0;
+  if (used >= HINT_MAX) { toast('이 문제의 힌트를 모두 썼어요', 'no'); return; }
+  if (open.length <= 1) { toast('마지막 한 글자는 직접 맞혀 보세요!', 'no'); return; }
+  const c = pick(open); c.lock = true; c.hint = true; hintsUsed++; hintCount[w.id] = used + 1; updateHintBtn();
+  sfx.hint(); toast(`💡 힌트: '${c.ans}'`);
+  paintCell(c); autoSolve();
+  if (w.cells.every(x => x.lock)) { solve(w); return; }
+  updateProgress(); paintList(); renderPattern(); persist();
+  try { ans.focus({ preventScroll: true }); } catch (e) {}
+});
+
+function updateHintBtn() {
+  const b = $('hintBtn');
+  if (sel === null || solved.has(sel) || revealedAll) { b.disabled = true; b.textContent = '💡 한 글자 힌트'; return; }
+  const left = HINT_MAX - (hintCount[sel] || 0);
+  b.disabled = left <= 0;
+  b.textContent = left > 0 ? `💡 한 글자 힌트 (${left}/${HINT_MAX})` : '💡 힌트 소진';
+}
+
+/* ---------- timer ---------- */
+const fmt = ms => { const s = Math.floor(ms / 1000); return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0'); };
+function updateRevealBtn() {
+  const b = $('revealBtn');
+  if (revealedAll) { b.disabled = true; b.textContent = '정답 공개됨'; return; }
+  b.textContent = '정답 전체 보기';
+  b.disabled = !started || Date.now() - startAt < REVEAL_LOCK;
+}
+setInterval(() => { updateRevealBtn(); if (!started) return; $('timer').textContent = fmt(elapsedFinal !== null ? elapsedFinal : Date.now() - startAt); }, 250);
+
+/* ---------- finish / reveal / reset ---------- */
+function rankOf(ms, h) {
+  const m = ms / 60000;
+  if (h === 0 && m < 6) return ['AI 그랜드마스터 👑', '#ffd23f'];
+  if (h <= 2 && m < 10) return ['프롬프트 장인 🔥', '#ff2bd6'];
+  if (h <= 5) return ['AI 우등생 ✨', '#00f0ff'];
+  return ['AI 성장 중 🌱', '#7cff4f'];
+}
+function finish() {
+  if (elapsedFinal === null) elapsedFinal = Date.now() - startAt;
+  persist();
+  const [rk, col] = rankOf(elapsedFinal, hintsUsed);
+  $('rankTxt').textContent = rk; $('rankTxt').style.color = col;
+  $('dTime').textContent = fmt(elapsedFinal); $('dHint').textContent = hintsUsed;
+  $('done').classList.remove('hidden');
+  ans.blur(); sfx.win(); confetti();
+}
+$('viewBtn').addEventListener('click', () => { $('done').classList.add('hidden'); window.scrollTo({ top: 0, behavior: 'smooth' }); });
+let cfAction = null;
+function ask(title, text, yes, fn) { $('cfTitle').textContent = title; $('cfText').textContent = text; $('cfYes').textContent = yes; cfAction = fn; $('confirm').classList.remove('hidden'); }
+$('cfNo').addEventListener('click', () => $('confirm').classList.add('hidden'));
+$('cfYes').addEventListener('click', () => { $('confirm').classList.add('hidden'); if (cfAction) cfAction(); });
+$('revealBtn').addEventListener('click', () => {
+  if (revealedAll || !started || Date.now() - startAt < REVEAL_LOCK) { updateRevealBtn(); return; }
+  ask('정답을 볼까요?', '모든 칸에 정답이 채워지고 시간이 멈춰요.', '네, 볼게요', () => {
+    revealedAll = true; if (elapsedFinal === null) elapsedFinal = Date.now() - startAt;
+    words.forEach(w => w.cells.forEach(c => { if (!c.lock) { c.lock = true; c.rev = true; } }));
+    paintAll(); paintList(); persist(); updateRevealBtn(); if (sel !== null) select(sel, true);
+    toast('정답을 모두 공개했어요');
+  });
+});
+$('resetBtn').addEventListener('click', () => {
+  ask('처음부터 할까요?', '지금까지 맞힌 기록이 모두 지워져요.', '다시 시작', () => {
+    try { localStorage.removeItem(KEY); } catch (e) {}
+    solved = new Set(); hintCount = {}; hintsUsed = 0; elapsedFinal = null; revealedAll = false;
+    cells.forEach(c => { c.lock = false; c.hint = false; c.rev = false; });
+    startAt = Date.now(); paintAll(); updateProgress(); paintList(); persist(); updateRevealBtn();
+    select(order[0].id, true); window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+});
+
+/* ---------- confetti ---------- */
+function confetti() {
+  const cv = $('confetti'), ctx = cv.getContext('2d'), dpr = Math.min(2, devicePixelRatio || 1);
+  cv.width = innerWidth * dpr; cv.height = innerHeight * dpr; ctx.scale(dpr, dpr);
+  const cols = ['#00f0ff', '#ff2bd6', '#ffd23f', '#7cff4f', '#9b6bff', '#ffffff'];
+  const ps = Array.from({ length: 170 }, () => ({ x: innerWidth / 2 + (Math.random() - .5) * 80, y: innerHeight * 0.35, vx: (Math.random() - .5) * 16, vy: -Math.random() * 15 - 4, s: 5 + Math.random() * 7, r: Math.random() * 6, vr: (Math.random() - .5) * .4, c: pick(cols), l: 1 }));
+  let last = performance.now();
+  const step = now => {
+    const dt = Math.min(0.033, (now - last) / 1000) * 60; last = now;
+    ctx.clearRect(0, 0, innerWidth, innerHeight); let alive = 0;
+    for (const p of ps) {
+      p.vy += 0.35 * dt; p.vx *= Math.pow(0.99, dt); p.x += p.vx * dt; p.y += p.vy * dt; p.r += p.vr * dt;
+      if (p.y > innerHeight * 0.75) p.l -= 0.02 * dt;
+      if (p.l <= 0 || p.y > innerHeight + 20) continue; alive++;
+      ctx.save(); ctx.globalAlpha = Math.max(0, p.l); ctx.translate(p.x, p.y); ctx.rotate(p.r); ctx.fillStyle = p.c; ctx.fillRect(-p.s / 2, -p.s / 4, p.s, p.s / 2); ctx.restore();
+    }
+    if (alive) requestAnimationFrame(step); else ctx.clearRect(0, 0, innerWidth, innerHeight);
+  };
+  requestAnimationFrame(step);
+}
+
+/* ---------- boot ---------- */
+sizeGrid(); buildGrid(); buildLists();
+const resumed = restore();
+paintAll(); updateProgress(); paintList();
+select(order.find(w => !solved.has(w.id))?.id ?? order[0].id, true);
+if (resumed) { $('intro').classList.add('hidden'); if (solved.size === words.length && !revealedAll) finish(); }
+$('startBtn').addEventListener('click', () => {
+  initAudio(); started = true; startAt = Date.now(); persist();
+  $('intro').classList.add('hidden');
+});
+let rz = null; window.addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(sizeGrid, 100); });
+})();
+</script>
+</body>
+</html>
